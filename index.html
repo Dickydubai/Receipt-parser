@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Receipt Parser — Maison Sarayaa</title>
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Receipt Parser" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; background: #f5f5f0; min-height: 100vh; padding: 1.5rem 1rem 3rem; color: #1a1a1a; }
+  .app { max-width: 560px; margin: 0 auto; }
+  .header { margin-bottom: 1.5rem; }
+  .header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; margin-bottom: 3px; }
+  .header p { font-size: 13px; color: #888; }
+  .api-key-banner { background: #fff; border: 1.5px solid #e5e5e5; border-radius: 12px; padding: 14px; margin-bottom: 16px; }
+  .api-key-banner p { font-size: 13px; color: #555; margin-bottom: 8px; }
+  .api-key-row { display: flex; gap: 8px; }
+  .api-key-row input { flex: 1; font-size: 13px; padding: 8px 10px; border-radius: 8px; border: 1px solid #e5e5e5; background: #fafafa; color: #1a1a1a; font-family: inherit; }
+  .api-key-row input:focus { outline: none; border-color: #1a1a1a; }
+  .btn-save-key { padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; background: #1a1a1a; color: #fff; border: none; cursor: pointer; white-space: nowrap; }
+  .key-saved { font-size: 12px; color: #4caf50; margin-top: 6px; font-weight: 500; display: none; }
+  .upload-zone { border: 1.5px dashed #ccc; border-radius: 14px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; background: #fff; transition: background 0.15s; }
+  .upload-zone:active { background: #f9f9f9; }
+  .upload-zone .icon { font-size: 36px; margin-bottom: 10px; }
+  .upload-zone p { font-size: 15px; color: #555; margin-bottom: 6px; font-weight: 500; }
+  .upload-zone span { font-size: 12px; color: #aaa; }
+  #fileInput { display: none; }
+  .preview-img { max-width: 100%; max-height: 220px; border-radius: 10px; margin: 16px auto 0; display: block; border: 1px solid #e5e5e5; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 12px 20px; border-radius: 10px; font-size: 15px; font-weight: 500; cursor: pointer; border: none; transition: opacity 0.15s, transform 0.1s; -webkit-tap-highlight-color: transparent; }
+  .btn:active { transform: scale(0.97); opacity: 0.85; }
+  .btn-primary { background: #1a1a1a; color: #fff; width: 100%; margin-top: 12px; }
+  .btn-secondary { background: #efefef; color: #1a1a1a; }
+  .btn-sm { padding: 9px 16px; font-size: 14px; }
+  .btn-danger { background: #fff0f0; color: #c62828; }
+  .actions-row { display: flex; gap: 10px; margin-top: 10px; }
+  .actions-row .btn { flex: 1; }
+  .loading { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 12px; background: #fff; margin-top: 14px; font-size: 14px; color: #666; border: 1px solid #eee; }
+  .spinner { width: 18px; height: 18px; border: 2px solid #ddd; border-top-color: #1a1a1a; border-radius: 50%; animation: spin 0.75s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .flag-banner { background: #fffbeb; border: 1px solid #f6d860; border-radius: 10px; padding: 12px 14px; font-size: 13px; color: #92610a; display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; line-height: 1.5; }
+  .result-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 14px; padding: 1.25rem; margin-top: 14px; }
+  .result-card h3 { font-size: 11px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; }
+  .field-row { display: grid; grid-template-columns: 130px 1fr; align-items: center; padding: 9px 0; border-bottom: 1px solid #f2f2f2; gap: 10px; }
+  .field-row:last-child { border-bottom: none; }
+  .field-label { font-size: 13px; color: #888; }
+  .field-val input, .field-val select { width: 100%; font-size: 14px; padding: 7px 10px; border-radius: 8px; border: 1px solid #e5e5e5; background: #fafafa; color: #1a1a1a; font-family: inherit; -webkit-appearance: none; appearance: none; }
+  .field-val select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+  .field-val input:focus, .field-val select:focus { outline: none; border-color: #1a1a1a; background: #fff; }
+  .confirm-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .confirm-actions .btn { flex: 1; min-width: 140px; }
+  .excel-row { background: #f7f7f7; border-radius: 8px; padding: 10px 12px; margin-top: 12px; font-size: 11px; font-family: 'Menlo', 'Courier New', monospace; color: #555; word-break: break-all; line-height: 1.6; }
+  .copy-note { font-size: 12px; color: #4caf50; margin-top: 6px; font-weight: 500; }
+  .divider { height: 1px; background: #eee; margin: 2rem 0; }
+  .history-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+  .history-header h3 { font-size: 15px; font-weight: 600; }
+  .history-actions { display: flex; gap: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-weight: 500; color: #aaa; padding: 6px 8px; border-bottom: 1px solid #eee; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+  td { padding: 10px 8px; border-bottom: 1px solid #f5f5f5; color: #1a1a1a; }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 100px; font-size: 11px; font-weight: 600; }
+  .badge-ok { background: #e8f5e9; color: #2e7d32; }
+  .badge-review { background: #fff8e1; color: #f57f17; }
+  .total-bar { background: #1a1a1a; color: #fff; border-radius: 10px; padding: 14px 16px; margin-top: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .total-bar span { font-size: 13px; color: #aaa; }
+  .total-bar strong { font-size: 18px; font-weight: 600; }
+  .persist-note { font-size: 11px; color: #aaa; margin-top: 8px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>Receipt Parser</h1>
+    <p>Maison Sarayaa · Household Expenses</p>
+  </div>
+
+  <div class="api-key-banner" id="apiKeyBanner">
+    <p>Enter your Gemini API key to get started. Saved on this device only.</p>
+    <div class="api-key-row">
+      <input type="password" id="apiKeyInput" placeholder="Paste your Gemini API key" autocomplete="off" />
+      <button class="btn-save-key" onclick="saveApiKey()">Save</button>
+    </div>
+    <div class="key-saved" id="keySaved">✓ Key saved</div>
+  </div>
+
+  <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+    <div class="icon">🧾</div>
+    <p>Tap to photograph or upload a receipt</p>
+    <span>Take a photo or choose from camera roll</span>
+    <img id="previewImg" class="preview-img" style="display:none;" alt="Receipt preview" />
+  </div>
+  <input type="file" id="fileInput" accept="image/*" capture="environment" />
+
+  <div id="actionBar" style="display:none;">
+    <button class="btn btn-primary" id="extractBtn" onclick="extractReceipt()">✦ Extract data</button>
+    <div class="actions-row">
+      <button class="btn btn-secondary btn-sm" onclick="resetAll()">↺ New receipt</button>
+    </div>
+  </div>
+
+  <div id="loadingDiv" style="display:none;" class="loading">
+    <div class="spinner"></div>
+    <span id="loadingMsg">Reading receipt...</span>
+  </div>
+
+  <div id="flagBanner" style="display:none;" class="flag-banner">
+    ⚠️ <span id="flagMsg"></span>
+  </div>
+
+  <div id="resultCard" style="display:none;" class="result-card">
+    <h3>Extracted fields — edit if needed</h3>
+    <div class="field-row">
+      <span class="field-label">Date</span>
+      <div class="field-val"><input type="date" id="f_date" onchange="updateMonth()" /></div>
+    </div>
+    <div class="field-row">
+      <span class="field-label">Month</span>
+      <div class="field-val"><input type="text" id="f_month" placeholder="e.g. May 2026" /></div>
+    </div>
+    <div class="field-row">
+      <span class="field-label">Category</span>
+      <div class="field-val">
+        <select id="f_category">
+          <option value="">— select —</option>
+          <option>Staff</option>
+          <option>Utilities</option>
+          <option>Groceries</option>
+          <option>Maintenance</option>
+          <option>Transport</option>
+          <option>Family</option>
+          <option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <span class="field-label">Sub category</span>
+      <div class="field-val"><input type="text" id="f_subcat" placeholder="Optional" /></div>
+    </div>
+    <div class="field-row">
+      <span class="field-label">Merchant</span>
+      <div class="field-val">
+        <select id="f_merchant">
+          <option value="">— select —</option>
+          <option>Spinneys</option>
+          <option>Geant</option>
+          <option>Carrefour</option>
+          <option>ADNOC</option>
+          <option>ENOC</option>
+          <option>Emarat</option>
+          <option>RTA</option>
+          <option>Prime Gourmet</option>
+          <option>Waitrose</option>
+          <option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <span class="field-label">Description</span>
+      <div class="field-val"><input type="text" id="f_desc" placeholder="Optional" /></div>
+    </div>
+    <div class="field-row">
+      <span class="field-label">Paid by</span>
+      <div class="field-val">
+        <select id="f_paidby">
+          <option value="">— select —</option>
+          <option>Tauseef</option>
+          <option>Sheyla</option>
+          <option>Abraham</option>
+          <option>Hussein</option>
+          <option>Yigram</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <span class="field-label">Payment method</span>
+      <div class="field-val">
+        <select id="f_payment">
+          <option value="">— select —</option>
+          <option>Cash</option>
+          <option>Card</option>
+          <option>Bank Transfer</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <span class="field-label">Amount (AED)</span>
+      <div class="field-val"><input type="number" id="f_amount" step="0.01" placeholder="0.00" inputmode="decimal" /></div>
+    </div>
+    <div class="field-row">
+      <span class="field-label">Notes</span>
+      <div class="field-val"><input type="text" id="f_notes" placeholder="Optional" /></div>
+    </div>
+    <div class="confirm-actions">
+      <button class="btn btn-primary btn-sm" onclick="confirmRow()">✓ Add to log</button>
+      <button class="btn btn-secondary btn-sm" onclick="copyExcelRow()">⎘ Copy row</button>
+    </div>
+    <div id="excelRowDiv" style="display:none;">
+      <div class="excel-row" id="excelRowText"></div>
+      <p class="copy-note">✓ Copied to clipboard</p>
+    </div>
+  </div>
+
+  <div id="historySection" style="display:none;">
+    <div class="divider"></div>
+    <div class="history-header">
+      <h3>Session log</h3>
+      <div class="history-actions">
+        <button class="btn btn-secondary btn-sm" onclick="exportCSV()">↓ Export CSV</button>
+        <button class="btn btn-danger btn-sm" onclick="clearLog()">✕ Clear</button>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Merchant</th>
+          <th>Category</th>
+          <th>Amount</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="historyBody"></tbody>
+    </table>
+    <div class="total-bar">
+      <span>Session total</span>
+      <strong id="sessionTotal">AED 0.00</strong>
+    </div>
+    <p class="persist-note">Log is saved on this device and persists between sessions.</p>
+  </div>
+</div>
+
+<script>
+  let currentImageBase64 = null;
+  let currentMimeType = 'image/jpeg';
+  let sessionLog = [];
+
+  window.addEventListener('DOMContentLoaded', function() {
+    const saved = localStorage.getItem('ms_receipt_log');
+    if (saved) {
+      try {
+        sessionLog = JSON.parse(saved);
+        if (sessionLog.length > 0) {
+          renderHistory();
+          document.getElementById('historySection').style.display = 'block';
+        }
+      } catch(e) { sessionLog = []; }
+    }
+    const savedKey = localStorage.getItem('ms_gemini_key');
+    if (savedKey) {
+      document.getElementById('apiKeyBanner').style.display = 'none';
+    }
+  });
+
+  function saveApiKey() {
+    const key = document.getElementById('apiKeyInput').value.trim();
+    if (!key) return;
+    localStorage.setItem('ms_gemini_key', key);
+    document.getElementById('keySaved').style.display = 'block';
+    setTimeout(function() {
+      document.getElementById('apiKeyBanner').style.display = 'none';
+    }, 1000);
+  }
+
+  function getApiKey() {
+    return localStorage.getItem('ms_gemini_key') || '';
+  }
+
+  document.getElementById('fileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) handleFile(file);
+  });
+
+  function handleFile(file) {
+    currentMimeType = file.type || 'image/jpeg';
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const dataUrl = e.target.result;
+      currentImageBase64 = dataUrl.split(',')[1];
+      const preview = document.getElementById('previewImg');
+      preview.src = dataUrl;
+      preview.style.display = 'block';
+      document.getElementById('actionBar').style.display = 'block';
+      document.getElementById('resultCard').style.display = 'none';
+      document.getElementById('flagBanner').style.display = 'none';
+      document.getElementById('excelRowDiv').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function updateMonth() {
+    const d = document.getElementById('f_date').value;
+    if (!d) return;
+    const date = new Date(d);
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    document.getElementById('f_month').value = months[date.getMonth()] + ' ' + date.getFullYear();
+  }
+
+  async function extractReceipt() {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      document.getElementById('apiKeyBanner').style.display = 'block';
+      showFlag('Please enter your Gemini API key above first.');
+      return;
+    }
+    if (!currentImageBase64) return;
+
+    document.getElementById('loadingDiv').style.display = 'flex';
+    document.getElementById('resultCard').style.display = 'none';
+    document.getElementById('flagBanner').style.display = 'none';
+    document.getElementById('extractBtn').disabled = true;
+
+    const msgs = ['Reading receipt...', 'Identifying fields...', 'Almost done...'];
+    let mi = 0;
+    const ticker = setInterval(function() {
+      mi = (mi + 1) % msgs.length;
+      document.getElementById('loadingMsg').textContent = msgs[mi];
+    }, 1800);
+
+    const prompt = `You are a receipt data extractor for a Dubai household expense tracker. Extract fields from this receipt image and return ONLY a valid JSON object with no markdown, no code fences, no extra text:
+{
+  "date": "DD/MM/YYYY",
+  "merchant": "map to one of: Spinneys, Geant, Carrefour, ADNOC, ENOC, Emarat, RTA, Prime Gourmet, Waitrose — or use actual merchant name if no match",
+  "category": "one of: Staff, Utilities, Groceries, Maintenance, Transport, Family, Other",
+  "sub_category": "if clear from context, else empty string",
+  "description": "brief description if items are legible, else empty string",
+  "amount": "numeric total only, no currency symbol",
+  "payment_method": "Cash, Card, or Bank Transfer if visible, else empty string",
+  "confidence": "high, medium, or low",
+  "flags": ["array of field names that were unclear or missing"]
+}
+If this is not a receipt image return: {"error":"not_a_receipt"}
+If the image is too blurry or dark to read return: {"error":"unreadable"}`;
+
+    try {
+      const resp = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=' + apiKey,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { inline_data: { mime_type: currentMimeType, data: currentImageBase64 } },
+                { text: prompt }
+              ]
+            }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
+          })
+        }
+      );
+
+      clearInterval(ticker);
+      document.getElementById('loadingDiv').style.display = 'none';
+      document.getElementById('extractBtn').disabled = false;
+
+      if (!resp.ok) {
+        const err = await resp.json();
+        const msg = (err.error && err.error.message) || 'API error';
+        if (msg.toLowerCase().includes('api key') || msg.toLowerCase().includes('invalid')) {
+          localStorage.removeItem('ms_gemini_key');
+          document.getElementById('apiKeyBanner').style.display = 'block';
+          showFlag('Invalid API key. Please re-enter your Gemini API key above.');
+        } else {
+          showFlag('Error: ' + msg);
+        }
+        return;
+      }
+
+      const data = await resp.json();
+      const raw = data.candidates[0].content.parts[0].text.trim();
+      const clean = raw.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+
+      if (parsed.error) {
+        showFlag(parsed.error === 'not_a_receipt'
+          ? 'This does not appear to be a receipt. Please upload a receipt photo.'
+          : 'Image too unclear to read. Please retake with better lighting.');
+        return;
+      }
+
+      populateFields(parsed);
+
+      if (parsed.confidence === 'low' || (parsed.flags && parsed.flags.length > 0)) {
+        showFlag(parsed.flags && parsed.flags.length > 0
+          ? 'Please review these fields: ' + parsed.flags.join(', ') + '.'
+          : 'Low confidence read — please verify all fields.');
+      }
+
+      document.getElementById('resultCard').style.display = 'block';
+      document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    } catch (err) {
+      clearInterval(ticker);
+      document.getElementById('loadingDiv').style.display = 'none';
+      document.getElementById('extractBtn').disabled = false;
+      showFlag('Connection error. Please check your internet and try again.');
+    }
+  }
+
+  function showFlag(msg) {
+    document.getElementById('flagMsg').textContent = msg;
+    document.getElementById('flagBanner').style.display = 'flex';
+  }
+
+  function populateFields(data) {
+    if (data.date) {
+      const parts = data.date.split('/');
+      if (parts.length === 3) {
+        document.getElementById('f_date').value = parts[2] + '-' + parts[1] + '-' + parts[0];
+        updateMonth();
+      }
+    }
+    setSelect('f_category', data.category);
+    document.getElementById('f_subcat').value = data.sub_category || '';
+    setSelect('f_merchant', data.merchant);
+    document.getElementById('f_desc').value = data.description || '';
+    document.getElementById('f_paidby').value = '';
+    setSelect('f_payment', data.payment_method);
+    document.getElementById('f_amount').value = data.amount || '';
+    document.getElementById('f_notes').value = '';
+  }
+
+  function setSelect(id, value) {
+    if (!value) return;
+    const sel = document.getElementById(id);
+    for (let opt of sel.options) {
+      if (opt.value === value) { sel.value = value; return; }
+    }
+    const opt = document.createElement('option');
+    opt.value = value; opt.textContent = value;
+    sel.insertBefore(opt, sel.lastElementChild);
+    sel.value = value;
+  }
+
+  function getRow() {
+    const dateVal = document.getElementById('f_date').value;
+    let displayDate = '';
+    if (dateVal) {
+      const d = new Date(dateVal);
+      displayDate = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+    }
+    const amt = document.getElementById('f_amount').value;
+    return {
+      date: displayDate,
+      month: document.getElementById('f_month').value,
+      category: document.getElementById('f_category').value,
+      subcat: document.getElementById('f_subcat').value,
+      merchant: document.getElementById('f_merchant').value,
+      desc: document.getElementById('f_desc').value,
+      paidby: document.getElementById('f_paidby').value,
+      payment: document.getElementById('f_payment').value,
+      amount: amt ? parseFloat(amt).toFixed(2) : '',
+      notes: document.getElementById('f_notes').value
+    };
+  }
+
+  function confirmRow() {
+    const row = getRow();
+    const hasFlag = document.getElementById('flagBanner').style.display !== 'none';
+    sessionLog.push({ ...row, status: hasFlag ? 'review' : 'ok' });
+    localStorage.setItem('ms_receipt_log', JSON.stringify(sessionLog));
+    renderHistory();
+    document.getElementById('historySection').style.display = 'block';
+    resetAll();
+    document.getElementById('historySection').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function copyExcelRow() {
+    const row = getRow();
+    const text = [row.date, row.month, row.category, row.subcat, row.merchant, row.desc, row.paidby, row.payment, row.amount ? 'AED ' + row.amount : '', row.notes].join('\t');
+    document.getElementById('excelRowText').textContent = text;
+    document.getElementById('excelRowDiv').style.display = 'block';
+    if (navigator.clipboard) navigator.clipboard.writeText(text).catch(function() {});
+  }
+
+  function renderHistory() {
+    const tbody = document.getElementById('historyBody');
+    tbody.innerHTML = '';
+    let total = 0;
+    sessionLog.forEach(function(row) {
+      if (row.amount) total += parseFloat(row.amount);
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + (row.date || '—') + '</td>' +
+        '<td>' + (row.merchant || '—') + '</td>' +
+        '<td>' + (row.category || '—') + '</td>' +
+        '<td>AED ' + (row.amount || '0.00') + '</td>' +
+        '<td><span class="badge ' + (row.status === 'review' ? 'badge-review' : 'badge-ok') + '">' + (row.status === 'review' ? 'Review' : 'OK') + '</span></td>';
+      tbody.appendChild(tr);
+    });
+    document.getElementById('sessionTotal').textContent = 'AED ' + total.toFixed(2);
+  }
+
+  function exportCSV() {
+    const headers = ['Date','Month','Category','Sub Category','Merchant','Description','Paid By','Payment Method','Amount (AED)','Notes'];
+    const rows = sessionLog.map(function(r) {
+      return [r.date, r.month, r.category, r.subcat, r.merchant, r.desc, r.paidby, r.payment, r.amount, r.notes]
+        .map(function(v) { return '"' + (v || '').replace(/"/g, '""') + '"'; }).join(',');
+    });
+    const csv = [headers.join(',')].concat(rows).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'receipts_' + new Date().toISOString().slice(0,10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  function clearLog() {
+    if (!confirm('Clear all ' + sessionLog.length + ' entries from the log?')) return;
+    sessionLog = [];
+    localStorage.removeItem('ms_receipt_log');
+    document.getElementById('historySection').style.display = 'none';
+  }
+
+  function resetAll() {
+    currentImageBase64 = null;
+    document.getElementById('fileInput').value = '';
+    document.getElementById('previewImg').style.display = 'none';
+    document.getElementById('actionBar').style.display = 'none';
+    document.getElementById('resultCard').style.display = 'none';
+    document.getElementById('flagBanner').style.display = 'none';
+    document.getElementById('loadingDiv').style.display = 'none';
+    document.getElementById('excelRowDiv').style.display = 'none';
+  }
+</script>
+</body>
+</html>
